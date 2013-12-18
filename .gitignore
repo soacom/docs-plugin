@@ -1,9 +1,5 @@
 _config.yml
 _guard.yml
-_includes
-_layouts
 _plugins
 Gemfile
 Guardfile
-js
-stopwords.txt

@@ -33,10 +33,11 @@ module Jekyll
       # gather pages and posts
       items = pages_to_index(site)
       content_renderer = PageRenderer.new(site)
+      pdf_renderer = PdfRenderer.new(site)
       index = []
 
       items.each do |item|
-        entry = SearchEntry.create(item, content_renderer)
+        entry = SearchEntry.create(item, content_renderer, pdf_renderer)
 
         entry.strip_index_suffix_from_url! if @strip_index_html
         entry.strip_stopwords!(stopwords, @min_length) if File.exists?(@stopwords_file) 
@@ -119,21 +120,80 @@ module Jekyll
     end
   end
   
+  class PdfRenderer
+    def initialize(site)
+        @site = site
+      end
+
+    def render(file, noblank = true)
+      spec = file.sub(/.pdf$/, '')
+      `pdftotext #{spec}.pdf`
+      file = File.new("#{spec}.txt")
+      text = []
+        file.readlines.each do |l|
+        l.chomp! if noblank
+          if l.length > 0
+          text << l
+          end
+        end
+      file.close
+      # FileUtils.rm "#{spec}.txt", :force => true
+      text
+    end
+  end
+end
+module Jekyll
+
+  class PdfRenderer
+    def initialize(site)
+        @site = site
+      end
+
+    def render(filename, noblank = true)
+      spec = filename.sub(/.pdf$/, '')
+      `pdftotext #{spec}.pdf`
+      file = File.new("#{spec}.txt")
+      text = '';
+        file.readlines.each do |l|
+        l.chomp! if noblank
+          if l.length > 0
+          text = text + ' ' + l
+          end
+        end
+      file.close
+      FileUtils.rm "#{spec}.txt", :force => true
+      # text.encode!('UTF-8', 'UTF-8', :invalid => :replace)
+      if !text.valid_encoding? 
+        text.encode!('UTF-16', 'UTF-8', :invalid => :replace, :replace => '')
+        text.encode!('UTF-8', 'UTF-16')
+        puts 'Encoding problem in file: ' << filename
+      end
+      text
+    end
+
+  end
+
 end
 require 'nokogiri'
 
 module Jekyll
   
   class SearchEntry
-    def self.create(page_or_post, renderer)
+    def self.create(page_or_post, renderer, pdf_renderer)
       return create_from_post(page_or_post, renderer) if page_or_post.is_a?(Jekyll::Post)
-      return create_from_page(page_or_post, renderer) if page_or_post.is_a?(Jekyll::Page)
+      return create_from_page(page_or_post, renderer, pdf_renderer) if page_or_post.is_a?(Jekyll::Page)
       raise 'Not supported'
     end
     
-    def self.create_from_page(page, renderer)
-      title, url, type, description = extract_title_description_and_url(page)
-      body = renderer.render(page)
+    def self.create_from_page(page, renderer, pdf_renderer)
+      title, url, type, file, product, description = extract_title_description_and_url(page)
+      if type == 'pdf'
+        filepath = "#{product}/assets/#{file}"
+        puts 'PDF file path: ' << filepath
+        body = pdf_renderer.render(filepath)
+      else
+        body = renderer.render(page)
+      end
       date = nil
       categories = []
       
@@ -141,7 +201,7 @@ module Jekyll
     end
     
     def self.create_from_post(post, renderer)
-      title, url, type, description = extract_title_description_and_url(post)
+      title, url, type, file, product, description = extract_title_description_and_url(post)
       body = renderer.render(post)
       date = post.date
       categories = post.categories
@@ -156,7 +216,7 @@ module Jekyll
       else
         type = 'pdf'
       end
-      [ data['title'], data['url'], type, data['description'] ]
+      [ data['title'], data['url'], type, data['filename'], data['product'], data['description'] ]
     end
 
     def self.extract_type(item)
