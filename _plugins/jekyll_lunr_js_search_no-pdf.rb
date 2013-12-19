@@ -167,9 +167,9 @@ module Jekyll
     def self.create_from_page(page, renderer, pdf_renderer)
       title, url, type, file, product, description = extract_title_description_and_url(page)
       if type == 'pdf'
-        filepath = "#{product}/assets/#{file}"
-        puts 'PDF file path: ' << filepath
-        body = pdf_renderer.render(filepath)
+#        filepath = "#{product}/assets/#{file}"
+#        puts 'PDF file path: ' << filepath
+#        body = pdf_renderer.render(filepath)
         body = "";
       else
         body = renderer.render(page)

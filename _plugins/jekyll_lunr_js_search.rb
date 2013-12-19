@@ -116,7 +116,7 @@ module Jekyll
       item.render({}, @site.site_payload)
       doc = Nokogiri::HTML(item.output)
       paragraphs = doc.search('p').map {|e| e.text }
-      paragraphs.join(" ").gsub("\r"," ").gsub("\n"," ").gsub(/[^A-Za-z-]/, " ").gsub(/\b[A-z]{1,2}\b/," ").split(" ").uniq.join(" ")
+      paragraphs.join(" ").downcase.gsub("\r"," ").gsub("\n"," ").gsub(/[^a-z-]/, " ").gsub(/\b[a-z]{1,2}\b/," ").split(" ").uniq.join(" ")
     end
   end
   
@@ -147,7 +147,7 @@ module Jekyll
         text.encode!('UTF-8', 'UTF-16')
         puts 'Encoding problem in file: ' << filename
       end
-      text.gsub(/[^A-Za-z-]/, " ").gsub(/\b[A-z]{1,2}\b/," ").split(" ").uniq.join(" ")
+      text.downcase.gsub(/[^a-z-]/, " ").gsub(/\b[a-z]{1,2}\b/," ").split(" ").uniq.join(" ")
     end
 
   end
@@ -167,10 +167,9 @@ module Jekyll
     def self.create_from_page(page, renderer, pdf_renderer)
       title, url, type, file, product, description = extract_title_description_and_url(page)
       if type == 'pdf'
-#        filepath = "#{product}/assets/#{file}"
-#        puts 'PDF file path: ' << filepath
-#        body = pdf_renderer.render(filepath)
-        body = "";
+        filepath = "#{product}/assets/#{file}"
+        puts 'PDF file path: ' << filepath
+        body = pdf_renderer.render(filepath)
       else
         body = renderer.render(page)
       end
