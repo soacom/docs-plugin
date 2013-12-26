@@ -169,9 +169,11 @@ module Jekyll
       if type == 'pdf'
         filepath = "#{product}/assets/#{file}"
         puts 'PDF file path: ' << filepath
-        body = pdf_renderer.render(filepath)
+        # body = pdf_renderer.render(filepath)
+        body = '';
       else
-        body = renderer.render(page)
+        # body = renderer.render(page)
+        body = '';
       end
       date = nil
       categories = []
