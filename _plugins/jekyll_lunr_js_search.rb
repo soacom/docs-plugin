@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'json'
+require 'uri'
 
 module Jekyll
 
@@ -41,13 +42,65 @@ module Jekyll
 
         entry.strip_index_suffix_from_url! if @strip_index_html
         entry.strip_stopwords!(stopwords, @min_length) if File.exists?(@stopwords_file) 
-        
+
+        # Do some magic to find relative hrefs in the description fields and make them relative to the site root, not the document
+        description = entry.description
+
+        # if there is an href in there then
+        if description
+          if description.match(/<a href=\"/) 
+            urlparts = URI.parse(entry.url).path.split('/')
+
+            # Get all the pieces either side of any <a href=" matches
+            hrefarray = description.split(/<a href=\"/)
+            puts 'HREF Array Length: ' << "#{hrefarray.length}"
+            # In the unlikely event that a description starts with a link then we'll keep the first element, otherwise...
+            if description !~ /^<a href=\"/
+              arrayindex = 1
+            else
+              arrayindex = 0
+            end
+            for ctr in arrayindex..hrefarray.length-1 do
+              href = hrefarray[ctr]
+              puts 'Orig HREF1: ' << "#{href}"
+
+              # Make sure it isn't an absolute URL already
+              if (href !~ /^\// && href !~ /^http/)
+                # Determine the number of ../ instances there are and remove them as you go
+                i = 0
+                while href.match(/\.\./) do
+                  pathpart = urlparts[i += 1]
+                  href = href.sub(/\.\.\//, "") 
+
+                  puts 'New HREF1: ' << "#{href}" 
+                end
+                # Now add the urlparts from the page back onto the href
+                puts 'URLParts.length: ' << "#{urlparts.length}" << ' No. ../ instances: ' << "#{i}"
+                for j in 2..(urlparts.length - (i)) do
+                  href = urlparts[urlparts.length - (j + i)] + "/" + href;
+                  puts 'New HREF2: ' << "#{href}" 
+                end
+                # And replace the value in the array with the new value
+                if site.baseurl 
+                  hrefarray[ctr] = site.baseurl + href
+                else
+                  hrefarray[ctr] = href
+                end
+              end
+            end
+
+            # And now we'll rebuild the description with the amended hrefs
+            description = hrefarray.join("<a href=\"")
+            puts 'New Description: ' << "#{description}"
+          end
+        end
+
         index << {
           :title => entry.title, 
           :url => entry.url,
           :date => entry.date,
           :type => entry.type,
-          :description => entry.description,
+          :description => description,
           :categories => entry.categories,
           :body => entry.body
         }
